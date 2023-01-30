@@ -145,7 +145,11 @@ void Functions::op_linv_B(const FncArgs &a) {
 
 void Functions::op_grp_bit_2op_BB(const FncArgs &a) {
     // transfer 2 bregs to REG_TMP0
+#if 0
+    UInt mask = emit_bin_cast(a.ops.bregs, 2);
+#else
     (void) emit_bin_cast(a.ops.bregs, 2);
+#endif
 
 #if 0    // FIXME: handle operation properly, this is just copy/paste from op_linv
     cs.emit("", "and", QL_SS2S(REG_TMP0 << "," << mask << "," << REG_TMP1));    // results in '0' for 'bit==0' and 'mask' for 'bit==1'
