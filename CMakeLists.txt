@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
+if(POLICY CMP0058)
+    cmake_policy(SET CMP0058 NEW)
+endif()
+
 project(OpenQL C CXX)
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
 
 # If OpenQL was already included elsewhere in the project, don't include it
 # again. There should be only one place for it and one version per project.
@@ -149,7 +156,7 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_FULL_LIBDIR}")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # Everything needs C++11 support.
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -360,7 +367,7 @@ configure_file(
 target_compile_definitions(ql PRIVATE BUILDING_OPENQL)
 
 # There is no distinction between public and private header files right now,
-# and they'r all in the source directory. Note the / at the end of the path;
+# and they're all in the source directory. Note the / at the end of the path;
 # this is necessary for the header files to be installed in the right location.
 target_include_directories(ql
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/"
@@ -401,60 +408,16 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
     target_compile_definitions(ql PRIVATE NDEBUG)
 endif()
 
-# LEMON -----------------------------------------------------------------------
+# Conan libs ------------------------------------------------------------------
 
-# Configure LEMON. LEMON by itself exposes the "lemon" target to link against,
-# but it doesn't use target_include_directories(), so we have to do that here.
-add_subdirectory(deps/lemon)
-target_include_directories(lemon INTERFACE
-    "${CMAKE_CURRENT_SOURCE_DIR}/deps/lemon"
-    "${CMAKE_CURRENT_BINARY_DIR}/deps/lemon"
+target_link_libraries(ql PUBLIC ${CONAN_LIBS})
+target_include_directories(ql PRIVATE
+    "${CONAN_INCLUDE_DIRS_EIGEN}/unsupported"
 )
-target_link_libraries(ql PUBLIC lemon)
-
-# Even more annoying stuff: LEMON doesn't install itself in the right place on
-# multilib systems (i.e. ones where the libdir is lib64 instead of just lib).
-# So to make sure it is found in the install tree, we have to install it in the
-# proper place ourselves. That would go something like this,
-#
-#     install(
-#         TARGETS lemon
-#         ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-#         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-#         COMPONENT library
-#     )
-#
-# but until CMake 3.13 the install directive MUST be in the directory where the
-# target is created, so we have to insert that piece of code into LEMON's own
-# CMakeLists.txt.
-
-
-# Eigen -----------------------------------------------------------------------
-
-# Wrap Eigen in an interface library to link against. Note that Eigen is only
-# used internally; its headers need not be installed or exposed to programs
-# linking against OpenQL.
-add_library(eigen INTERFACE)
-target_include_directories(eigen INTERFACE
-    "${CMAKE_CURRENT_SOURCE_DIR}/deps/eigen/Eigen"
-    "${CMAKE_CURRENT_SOURCE_DIR}/deps/eigen/unsupported"
-)
-target_link_libraries(ql PRIVATE eigen)
-
-
-# nlohmann::json --------------------------------------------------------------
-
-set(JSON_BuildTests OFF CACHE INTERNAL "")
-add_subdirectory(deps/json)
-target_link_libraries(ql PUBLIC nlohmann_json::nlohmann_json)
-
-
-# libqasm ---------------------------------------------------------------------
 
 # Load libqasm. libqasm's CMakeLists expose the "cqasm" target to link against.
 add_subdirectory(deps/libqasm)
 target_link_libraries(ql PUBLIC cqasm)
-
 
 # X11/CImg ---------------------------------------------------------------------
 
@@ -476,19 +439,7 @@ endif()
 
 if(QL_VISUALIZER)
     target_compile_definitions(ql PRIVATE WITH_VISUALIZER)
-    target_include_directories(ql PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/deps/cimg/include/")
 endif()
-
-# backward-cpp ----------------------------------------------------------------
-
-# Stack trace helper library, nothing functional here.
-add_subdirectory(deps/backward-cpp)
-add_backward(ql)
-
-# add_backward doesn't set INTERFACE_LINK_LIBRARIES, only LINK_LIBRARIES. That
-# goes wrong when we're compiling statically, because said libraries are shared
-# and need to be included in the final link.
-set_property(TARGET ql APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${BACKWARD_LIBRARIES})
 
 # HiGHS -----------------------------------------------------------------------
 
@@ -529,8 +480,6 @@ if(OPENQL_BUILD_TESTS)
         )
     endfunction()
 
-    add_subdirectory(deps/doctest)
-    
     # Include the directories containing integration tests.
     add_subdirectory(tests)
     add_subdirectory(examples)
@@ -543,7 +492,6 @@ if(OPENQL_BUILD_TESTS)
         set(name test_${name})
         add_executable("${name}" "${CMAKE_CURRENT_SOURCE_DIR}/src/ql/${source}")
         target_link_libraries("${name}" ql)
-        target_link_libraries("${name}" doctest)
         get_filename_component(working_dir "${CMAKE_CURRENT_SOURCE_DIR}/src/ql/${source}" DIRECTORY)
         add_test(
             NAME "${name}"
