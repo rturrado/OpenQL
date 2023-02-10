@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 
 if(POLICY CMP0058)
     cmake_policy(SET CMP0058 NEW)
@@ -16,6 +16,13 @@ if(NOT TARGET ql)
 # Loads up the appropriate directories for installing stuff.
 include(GNUInstallDirs)
 
+# Packages
+include(FetchContent)
+FetchContent_Declare(cqasm
+    GIT_REPOSITORY https://github.com/rturrado/libqasm.git
+    GIT_TAG "eb31e6171ba36125210d4b8bb9374c8acb82fa14"
+    )
+FetchContent_MakeAvailable(cqasm)
 
 #=============================================================================#
 # Configuration options                                                       #
@@ -191,11 +198,6 @@ function(create_resource fname)
     )
     add_dependencies(ql ${target_name})
 endfunction()
-
-# Add tree-gen. We need to do this *only* to get access to the generate_tree
-# CMake function; everything else is handled implicitly because tree-gen is a
-# transitive dependency of libqasm.
-add_subdirectory(deps/libqasm/src/cqasm/tree-gen deps/tree-gen)
 
 
 #=============================================================================#
@@ -415,8 +417,7 @@ target_include_directories(ql PRIVATE
     "${CONAN_INCLUDE_DIRS_EIGEN}/unsupported"
 )
 
-# Load libqasm. libqasm's CMakeLists expose the "cqasm" target to link against.
-add_subdirectory(deps/libqasm)
+# Load libqasm
 target_link_libraries(ql PUBLIC cqasm)
 
 # X11/CImg ---------------------------------------------------------------------

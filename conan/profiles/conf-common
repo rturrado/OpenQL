@@ -1,0 +1,10 @@
+[settings]
+
+[options]
+
+[build_requires]
+
+[env]
+RANGE_V3_DOCS=false
+RANGE_V3_EXAMPLES=false
+RANGE_V3_TESTS=false
