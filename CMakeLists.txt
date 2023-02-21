@@ -6,9 +6,6 @@ endif()
 
 project(OpenQL C CXX)
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
-
 # If OpenQL was already included elsewhere in the project, don't include it
 # again. There should be only one place for it and one version per project.
 if(NOT TARGET ql)
@@ -16,13 +13,15 @@ if(NOT TARGET ql)
 # Loads up the appropriate directories for installing stuff.
 include(GNUInstallDirs)
 
-# Packages
-include(FetchContent)
-FetchContent_Declare(cqasm
-    GIT_REPOSITORY https://github.com/rturrado/libqasm.git
-    GIT_TAG "eb31e6171ba36125210d4b8bb9374c8acb82fa14"
-    )
-FetchContent_MakeAvailable(cqasm)
+find_package(Backward CONFIG REQUIRED)
+find_package(cimg CONFIG REQUIRED)
+find_package(doctest CONFIG REQUIRED)
+find_package(Eigen3 CONFIG REQUIRED)
+find_package(LEMON CONFIG REQUIRED)
+find_package(libqasm CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+find_package(tree-gen CONFIG REQUIRED)
+
 
 #=============================================================================#
 # Configuration options                                                       #
@@ -206,6 +205,7 @@ endfunction()
 
 # Build the IR tree using tree-gen.
 generate_tree(
+    "${TREE-GEN_BINARY_PATH}"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ql/ir/ir.tree"
     "${CMAKE_CURRENT_BINARY_DIR}/include/ql/ir/ir.gen.h"
     "${CMAKE_CURRENT_BINARY_DIR}/src/ql/ir/ir.gen.cc"
@@ -372,6 +372,14 @@ target_compile_definitions(ql PRIVATE BUILDING_OPENQL)
 # and they're all in the source directory. Note the / at the end of the path;
 # this is necessary for the header files to be installed in the right location.
 target_include_directories(ql
+    SYSTEM PUBLIC "${Backward_INCLUDE_DIRS}"
+    SYSTEM PUBLIC "${cimg_INCLUDE_DIRS}"
+    SYSTEM PUBLIC "${doctest_INCLUDE_DIRS}"
+    SYSTEM PUBLIC "${Eigen3_INCLUDE_DIRS}/unsupported"
+    SYSTEM PUBLIC "${LEMON_INCLUDE_DIRS}"
+    SYSTEM PUBLIC "${libqasm_INCLUDE_DIRS}"
+    SYSTEM PUBLIC "${nlohmann_json_INCLUDE_DIRS}"
+    SYSTEM PUBLIC "${tree-gen_INCLUDE_DIRS}"
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/"
     PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/src/"
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/"
@@ -412,13 +420,16 @@ endif()
 
 # Conan libs ------------------------------------------------------------------
 
-target_link_libraries(ql PUBLIC ${CONAN_LIBS})
-target_include_directories(ql PRIVATE
-    "${CONAN_INCLUDE_DIRS_EIGEN}/unsupported"
+target_link_libraries(ql PRIVATE
+    Backward::Backward
+    cimg::cimg
+    doctest::doctest
+    Eigen3::Eigen
+    LEMON::LEMON
+    libqasm::libqasm
+    nlohmann_json::nlohmann_json
+    tree-gen::tree-gen
 )
-
-# Load libqasm
-target_link_libraries(ql PUBLIC cqasm)
 
 # X11/CImg ---------------------------------------------------------------------
 
