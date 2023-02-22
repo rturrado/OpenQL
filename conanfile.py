@@ -1,4 +1,3 @@
-import os
 from conans import ConanFile, tools
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 
@@ -17,7 +16,6 @@ class OpenQLConan(ConanFile):
         self.requires("eigen/3.4.0")
         self.requires("libqasm/0.1")
         self.requires("nlohmann_json/3.11.2")
-        self.requires("tree-gen/0.1")
         if tools.get_env("OPENQL_BUILD_TESTS", True):
             self.requires("gtest/1.12.1")
 
@@ -28,9 +26,9 @@ class OpenQLConan(ConanFile):
         deps = CMakeDeps(self)
         deps.generate()
         tc = CMakeToolchain(self)
-        tc.variables["ASAN_ENABLED"] = "ON" if tools.get_env("OPENQL_BUILD_TESTS", True) else "OFF"
-        tc.variables["OPENQL_BUILD_TESTS"] = "ON" if tools.get_env("OPENQL_BUILD_TESTS", True) else "OFF"
-        tc.variables["TREE-GEN_BINARY_PATH"] = os.path.join(self.dependencies["tree-gen"].package_folder, "bin", "tree-gen")
+        if tools.get_env("OPENQL_BUILD_TESTS") == "ON":
+            tc.variables["ASAN_ENABLED"] = "ON"
+            tc.variables["OPENQL_BUILD_TESTS"] = "ON"
         tc.generate()
 
     def build(self):

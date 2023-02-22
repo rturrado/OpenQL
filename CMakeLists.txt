@@ -20,7 +20,6 @@ find_package(Eigen3 CONFIG REQUIRED)
 find_package(LEMON CONFIG REQUIRED)
 find_package(libqasm CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-find_package(tree-gen CONFIG REQUIRED)
 
 
 #=============================================================================#
@@ -198,6 +197,11 @@ function(create_resource fname)
     add_dependencies(ql ${target_name})
 endfunction()
 
+# Add tree-gen. We need to do this *only* to get access to the generate_tree
+# CMake function; everything else is handled implicitly because tree-gen is a
+# transitive dependency of libqasm.
+add_subdirectory(deps/tree-gen)
+
 
 #=============================================================================#
 # OpenQL library target                                                       #
@@ -205,7 +209,6 @@ endfunction()
 
 # Build the IR tree using tree-gen.
 generate_tree(
-    "${TREE-GEN_BINARY_PATH}"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ql/ir/ir.tree"
     "${CMAKE_CURRENT_BINARY_DIR}/include/ql/ir/ir.gen.h"
     "${CMAKE_CURRENT_BINARY_DIR}/src/ql/ir/ir.gen.cc"
@@ -379,7 +382,7 @@ target_include_directories(ql
     SYSTEM PUBLIC "${LEMON_INCLUDE_DIRS}"
     SYSTEM PUBLIC "${libqasm_INCLUDE_DIRS}"
     SYSTEM PUBLIC "${nlohmann_json_INCLUDE_DIRS}"
-    SYSTEM PUBLIC "${tree-gen_INCLUDE_DIRS}"
+    SYSTEM PUBLIC ${TREE_LIB_PUBLIC_INCLUDE}
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/"
     PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/src/"
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/"
@@ -428,7 +431,6 @@ target_link_libraries(ql PRIVATE
     LEMON::LEMON
     libqasm::libqasm
     nlohmann_json::nlohmann_json
-    tree-gen::tree-gen
 )
 
 # X11/CImg ---------------------------------------------------------------------
